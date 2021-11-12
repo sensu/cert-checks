@@ -107,6 +107,7 @@ func fromFile(path string) certificateLoader {
 		if err != nil {
 			return nil, fmt.Errorf("error opening certificate file: %v", err)
 		}
+		defer f.Close()
 		data, err := io.ReadAll(f)
 		if err != nil {
 			return nil, fmt.Errorf("error reading certificate file: %v", err)
