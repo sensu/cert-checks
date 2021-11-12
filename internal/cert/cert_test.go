@@ -143,7 +143,7 @@ func TestCollectMetricsFromTLS(t *testing.T) {
 	if err != nil {
 		t.Fatalf("could not start test server: %v", err)
 	}
-	go srv.ServeTLS(ln, "", "")
+	go func() { _ = srv.ServeTLS(ln, "", "") }()
 	defer srv.Close()
 
 	nonTLSSrv := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {}))
