@@ -65,27 +65,34 @@ func CollectMetrics(ctx context.Context, path string, cfg Config) (Metrics, erro
 }
 
 func parse(cert string) (certificateLoader, error) {
+	if strings.HasPrefix(cert, "file://") ||
+		strings.HasPrefix(cert, "/") ||
+		strings.Index(cert, ":\\") == 1 {
+
+		path := strings.TrimPrefix(cert, "file://")
+		info, err := os.Stat(path)
+		if err != nil {
+			return nil, fmt.Errorf("file not found: %s", path)
+		}
+		if info.IsDir() {
+			return nil, fmt.Errorf("cannot use directory: %s", path)
+		}
+		return fromFile(path), nil
+	}
+
+	// Parse as network URL
 	certURL, err := url.Parse(cert)
 	if err != nil {
 		return nil, fmt.Errorf("error parsing URL %v", err)
 	}
 	switch certURL.Scheme {
-	case "", "file":
-		info, err := os.Stat(certURL.Path)
-		if err != nil {
-			return nil, fmt.Errorf("file not found: %s", certURL.Path)
+	case "https":
+		certURL.Scheme = "tcp"
+		if certURL.Port() == "" {
+			certURL.Host = fmt.Sprintf("%s:443", certURL.Host)
 		}
-		if info.IsDir() {
-			return nil, fmt.Errorf("cannot use directory: %s", certURL.Path)
-		}
-		return fromFile(certURL.Path), nil
-	case "https", "tcp", "tcp4", "tcp6":
-		if certURL.Scheme == "https" {
-			certURL.Scheme = "tcp"
-			if certURL.Port() == "" {
-				certURL.Host = fmt.Sprintf("%s:443", certURL.Host)
-			}
-		}
+		fallthrough
+	case "tcp", "tcp4", "tcp6":
 		return fromTLSHandshake(certURL), nil
 	default:
 		return nil, fmt.Errorf("unsupported scheme %s", certURL.Scheme)
