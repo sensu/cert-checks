@@ -79,7 +79,8 @@ func executeCheck(event *types.Event) (int, error) {
 	}
 	metrics, err := cert.CollectMetrics(ctx, plugin.Cert, cert.Config{ServerName: plugin.ServerName})
 	if err != nil {
-		return sensu.CheckStateCritical, err
+		fmt.Printf("cert-checks failed with error: %s\n", err.Error())
+		return sensu.CheckStateCritical, nil
 	}
 	fmt.Println(metrics.Output())
 	return sensu.CheckStateOK, nil
