@@ -1,6 +1,7 @@
 package cert
 
 import (
+	"bytes"
 	"context"
 	"crypto/tls"
 	"crypto/x509"
@@ -20,19 +21,32 @@ type Metrics struct {
 	EvaluatedAt         time.Time
 	SecondsSinceIssued  int
 	SecondsUntilExpires int
+	Tags                map[string]string
 }
 
 func (m Metrics) Output() string {
 	epoch := m.EvaluatedAt.UnixMilli()
+	var tags string
+	if len(m.Tags) > 0 {
+		buf := bytes.Buffer{}
+		seperator := ""
+		for tag, value := range m.Tags {
+			fmt.Fprintf(&buf, "%s%s=\"%s\"", seperator, tag, value)
+			if seperator == "" {
+				seperator = ", "
+			}
+		}
+		tags = fmt.Sprintf("{%s}", buf.String())
+	}
 	lines := []string{
 		"# TYPE cert_days_left gauge",
-		fmt.Sprintf("cert_days_left %f %d", float64(m.SecondsUntilExpires)/secondsToDays, epoch),
+		fmt.Sprintf("cert_days_left%s %f %d", tags, float64(m.SecondsUntilExpires)/secondsToDays, epoch),
 		"# TYPE cert_seconds_left gauge",
-		fmt.Sprintf("cert_seconds_left %d %d", m.SecondsUntilExpires, epoch),
+		fmt.Sprintf("cert_seconds_left%s %d %d", tags, m.SecondsUntilExpires, epoch),
 		"# TYPE cert_issued_days counter",
-		fmt.Sprintf("cert_issued_days %f %d", float64(m.SecondsSinceIssued)/secondsToDays, epoch),
+		fmt.Sprintf("cert_issued_days%s %f %d", tags, float64(m.SecondsSinceIssued)/secondsToDays, epoch),
 		"# TYPE cert_issued_seconds counter",
-		fmt.Sprintf("cert_issued_seconds %d %d", m.SecondsSinceIssued, epoch),
+		fmt.Sprintf("cert_issued_seconds%s %d %d", tags, m.SecondsSinceIssued, epoch),
 	}
 	return strings.Join(lines, "\n")
 }
@@ -62,6 +76,7 @@ func CollectMetrics(ctx context.Context, path string, cfg Config) (Metrics, erro
 		if err := cert.VerifyHostname(cfg.ServerName); err != nil {
 			return metrics, fmt.Errorf("error supplied servername not valid for this certificate: %v", err)
 		}
+		metrics.Tags = map[string]string{"servername": cfg.ServerName}
 	}
 	now := cfg.Now()
 	metrics.EvaluatedAt = now

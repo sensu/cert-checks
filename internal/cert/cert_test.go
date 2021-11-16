@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"reflect"
 	"testing"
 	"time"
 
@@ -62,6 +63,26 @@ func TestCollectMetricsFromFile(t *testing.T) {
 				SecondsSinceIssued:  0,
 				SecondsUntilExpires: int(duration.Seconds()),
 			},
+		}, {
+			Name: "includes servername tags when set",
+			Args: args{
+				Cert:       testCertPath,
+				Now:        withTimeIssued,
+				ServerName: "imposter.sensu.io",
+			},
+			Expected: &cert.Metrics{
+				SecondsSinceIssued:  0,
+				SecondsUntilExpires: int(duration.Seconds()),
+				Tags:                map[string]string{"servername": "imposter.sensu.io"},
+			},
+		}, {
+			Name: "validates certificate hostname when servername set",
+			Args: args{
+				Cert:       testCertPath,
+				Now:        withTimeIssued,
+				ServerName: "bazz.sensu.io",
+			},
+			ExpectErr: true,
 		},
 		{
 			Name: "file:// prefix for PEM encoded cert",
@@ -111,7 +132,10 @@ func TestCollectMetricsFromFile(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.Name, func(t *testing.T) {
-			actual, err := cert.CollectMetrics(ctx, tc.Args.Cert, cert.Config{Now: tc.Args.Now})
+			actual, err := cert.CollectMetrics(ctx, tc.Args.Cert, cert.Config{
+				Now:        tc.Args.Now,
+				ServerName: tc.Args.ServerName,
+			})
 			if err != nil && !tc.ExpectErr {
 				t.Errorf("unexpected error %v", err)
 				return
@@ -128,6 +152,9 @@ func TestCollectMetricsFromFile(t *testing.T) {
 			}
 			if actual.SecondsUntilExpires != tc.Expected.SecondsUntilExpires {
 				t.Errorf("expected SecondsUntilExpires to be: %d. actual: %d", tc.Expected.SecondsUntilExpires, actual.SecondsUntilExpires)
+			}
+			if !reflect.DeepEqual(actual.Tags, tc.Expected.Tags) {
+				t.Errorf("expected Tags to be %v. actual: %v", tc.Expected.Tags, actual.Tags)
 			}
 		})
 	}
@@ -215,6 +242,7 @@ func TestCollectMetricsFromTLS(t *testing.T) {
 			Expected: &cert.Metrics{
 				SecondsSinceIssued:  0,
 				SecondsUntilExpires: int(duration.Seconds()),
+				Tags:                map[string]string{"servername": "imposter.sensu.io"},
 			},
 		}, {
 			Name: "error when servername not valid for cert",
@@ -235,6 +263,7 @@ func TestCollectMetricsFromTLS(t *testing.T) {
 			Expected: &cert.Metrics{
 				SecondsSinceIssued:  120,
 				SecondsUntilExpires: int((duration - time.Minute*2).Seconds()),
+				Tags:                map[string]string{"servername": "local.test"},
 			},
 		}, {
 			Name: "tcp4 test server",
@@ -300,6 +329,9 @@ func TestCollectMetricsFromTLS(t *testing.T) {
 			}
 			if actual.SecondsUntilExpires != tc.Expected.SecondsUntilExpires {
 				t.Errorf("expected SecondsUntilExpires to be: %d. actual: %d", tc.Expected.SecondsUntilExpires, actual.SecondsUntilExpires)
+			}
+			if !reflect.DeepEqual(actual.Tags, tc.Expected.Tags) {
+				t.Errorf("expected Tags to be %v. actual: %v", tc.Expected.Tags, actual.Tags)
 			}
 		})
 	}
