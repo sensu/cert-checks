@@ -39,12 +39,16 @@ func (m Metrics) Output() string {
 		tags = fmt.Sprintf("{%s}", buf.String())
 	}
 	lines := []string{
+		"# HELP cert_days_left number of days until certificate expires. Expired certificates produce negative numbers.",
 		"# TYPE cert_days_left gauge",
 		fmt.Sprintf("cert_days_left%s %f %d", tags, float64(m.SecondsUntilExpires)/secondsToDays, epoch),
+		"# HELP cert_seconds_left number of seconds until certificate expires. Expired certificates produce negative numbers.",
 		"# TYPE cert_seconds_left gauge",
 		fmt.Sprintf("cert_seconds_left%s %d %d", tags, m.SecondsUntilExpires, epoch),
+		"# HELP cert_issued_days total number of days since certificate was issued.",
 		"# TYPE cert_issued_days counter",
 		fmt.Sprintf("cert_issued_days%s %f %d", tags, float64(m.SecondsSinceIssued)/secondsToDays, epoch),
+		"# HELP cert_issued_seconds total number of seconds since the certificate was issued.",
 		"# TYPE cert_issued_seconds counter",
 		fmt.Sprintf("cert_issued_seconds%s %d %d", tags, m.SecondsSinceIssued, epoch),
 	}
