@@ -58,6 +58,11 @@ func CollectMetrics(ctx context.Context, path string, cfg Config) (Metrics, erro
 	if err != nil {
 		return metrics, err
 	}
+	if cfg.ServerName != "" {
+		if err := cert.VerifyHostname(cfg.ServerName); err != nil {
+			return metrics, fmt.Errorf("error supplied servername not valid for this certificate: %v", err)
+		}
+	}
 	now := cfg.Now()
 	metrics.EvaluatedAt = now
 	metrics.SecondsSinceIssued = int(now.Sub(cert.NotBefore).Seconds())

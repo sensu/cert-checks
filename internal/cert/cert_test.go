@@ -217,6 +217,13 @@ func TestCollectMetricsFromTLS(t *testing.T) {
 				SecondsUntilExpires: int(duration.Seconds()),
 			},
 		}, {
+			Name: "error when servername not valid for cert",
+			Args: args{
+				Cert:       "tcp://" + ln.Addr().String(),
+				ServerName: "fizz.sensu.io",
+			},
+			ExpectErr: true,
+		}, {
 			Name: "tcp servername extension local.test",
 			Args: args{
 				Cert:       "tcp://" + ln.Addr().String(),
