@@ -14,7 +14,8 @@ import (
 // Config represents the check plugin config.
 type Config struct {
 	sensu.PluginConfig
-	Cert string
+	Cert       string
+	ServerName string
 }
 
 var (
@@ -34,6 +35,14 @@ var (
 			Shorthand: "c",
 			Usage:     "URL or file path to certificate",
 			Value:     &plugin.Cert,
+		},
+		{
+			Path:      "servername",
+			Env:       "CHECK_SERVER_NAME",
+			Argument:  "servername",
+			Shorthand: "s",
+			Usage:     "optional TLS servername extension argument",
+			Value:     &plugin.ServerName,
 		},
 	}
 )
@@ -68,7 +77,7 @@ func executeCheck(event *types.Event) (int, error) {
 		ctx, cancel = context.WithTimeout(ctx, time.Duration(plugin.Timeout))
 		defer cancel()
 	}
-	metrics, err := cert.CollectMetrics(ctx, plugin.Cert, cert.Config{})
+	metrics, err := cert.CollectMetrics(ctx, plugin.Cert, cert.Config{ServerName: plugin.ServerName})
 	if err != nil {
 		return sensu.CheckStateCritical, err
 	}

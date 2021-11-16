@@ -40,7 +40,8 @@ func (m Metrics) Output() string {
 // Config for evaluating metrics
 type Config struct {
 	// Now provider defaults to time.Now() when not provided
-	Now func() time.Time
+	Now        func() time.Time
+	ServerName string
 }
 
 // CollectMetrics Loads a certificate at a particular location and
@@ -49,7 +50,7 @@ func CollectMetrics(ctx context.Context, path string, cfg Config) (Metrics, erro
 		cfg.Now = time.Now
 	}
 	var metrics Metrics
-	certLoader, err := parse(path)
+	certLoader, err := parse(path, cfg.ServerName)
 	if err != nil {
 		return metrics, fmt.Errorf("error parsing cert location: %v", err)
 	}
@@ -64,7 +65,7 @@ func CollectMetrics(ctx context.Context, path string, cfg Config) (Metrics, erro
 	return metrics, nil
 }
 
-func parse(cert string) (certificateLoader, error) {
+func parse(cert, servername string) (certificateLoader, error) {
 	if strings.HasPrefix(cert, "file://") ||
 		strings.HasPrefix(cert, "/") ||
 		strings.Index(cert, ":\\") == 1 {
@@ -93,7 +94,7 @@ func parse(cert string) (certificateLoader, error) {
 		}
 		fallthrough
 	case "tcp", "tcp4", "tcp6":
-		return fromTLSHandshake(certURL), nil
+		return fromTLSHandshake(certURL, servername), nil
 	default:
 		return nil, fmt.Errorf("unsupported scheme %s", certURL.Scheme)
 	}
@@ -124,7 +125,7 @@ func fromFile(path string) certificateLoader {
 	}
 }
 
-func fromTLSHandshake(target *url.URL) certificateLoader {
+func fromTLSHandshake(target *url.URL, servername string) certificateLoader {
 	return func(ctx context.Context) (*x509.Certificate, error) {
 		dialer := &net.Dialer{
 			Deadline: time.Now().Add(time.Second * 10),
@@ -133,6 +134,9 @@ func fromTLSHandshake(target *url.URL) certificateLoader {
 			dialer.Deadline = deadline
 		}
 		cfg := &tls.Config{InsecureSkipVerify: true}
+		if servername != "" {
+			cfg.ServerName = servername
+		}
 		conn, err := tls.DialWithDialer(dialer, target.Scheme, target.Host, cfg)
 		if err != nil {
 			return nil, fmt.Errorf("error dialing TLS connection %v", err)

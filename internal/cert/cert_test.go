@@ -17,15 +17,23 @@ import (
 func TestCollectMetricsFromFile(t *testing.T) {
 	ctx := context.Background()
 
+	issuedAt := time.Unix(1<<30, 0)
+	duration := time.Hour * 72
+	// certBytes for imposter.sensu.io
+	_, certBytes, err := testcert.New("imposter.sensu.io", issuedAt, duration)
+	if err != nil {
+		t.Fatalf("could not load testcert as x509 key pair: %v", err)
+	}
+
 	tmpDir := t.TempDir()
 	testCertPath := tmpDir + "/testcert.pem"
-	err := os.WriteFile(testCertPath, testcert.TestCert, 0644)
+	err = os.WriteFile(testCertPath, certBytes, 0644)
 	if err != nil {
 		t.Fatalf("could not write test certificate to file: %v", err)
 	}
 
-	corruptedCert := make([]byte, len(testcert.TestCert))
-	copy(corruptedCert, testcert.TestCert)
+	corruptedCert := make([]byte, len(certBytes))
+	copy(corruptedCert, certBytes)
 	for i := len(corruptedCert) / 2; i < len(corruptedCert); i += 8 {
 		corruptedCert[i] ^= 0xFF
 	}
@@ -36,11 +44,11 @@ func TestCollectMetricsFromFile(t *testing.T) {
 	}
 
 	withTimeIssued := func() time.Time {
-		return testcert.NotBefore
+		return issuedAt
 	}
 
 	oneHourAfterExpiration := func() time.Time {
-		return testcert.NotAfter.Add(time.Hour)
+		return issuedAt.Add(duration).Add(time.Hour)
 	}
 
 	testCases := []testCase{
@@ -52,7 +60,7 @@ func TestCollectMetricsFromFile(t *testing.T) {
 			},
 			Expected: &cert.Metrics{
 				SecondsSinceIssued:  0,
-				SecondsUntilExpires: int(testcert.TimeEffective.Seconds()),
+				SecondsUntilExpires: int(duration.Seconds()),
 			},
 		},
 		{
@@ -63,7 +71,7 @@ func TestCollectMetricsFromFile(t *testing.T) {
 			},
 			Expected: &cert.Metrics{
 				SecondsSinceIssued:  0,
-				SecondsUntilExpires: int(testcert.TimeEffective.Seconds()),
+				SecondsUntilExpires: int(duration.Seconds()),
 			},
 		},
 		{
@@ -73,7 +81,7 @@ func TestCollectMetricsFromFile(t *testing.T) {
 				Now:  oneHourAfterExpiration,
 			},
 			Expected: &cert.Metrics{
-				SecondsSinceIssued:  int((testcert.TimeEffective + time.Hour).Seconds()),
+				SecondsSinceIssued:  int((duration + time.Hour).Seconds()),
 				SecondsUntilExpires: int((-1 * time.Hour).Seconds()),
 			},
 		},
@@ -128,12 +136,26 @@ func TestCollectMetricsFromFile(t *testing.T) {
 func TestCollectMetricsFromTLS(t *testing.T) {
 	ctx := context.Background()
 
-	keyPair, err := tls.X509KeyPair(testcert.TestCert, testcert.TestKey)
+	issuedAtSensu := time.Unix(1<<30, 0)
+	duration := time.Hour * 72
+
+	// keypair for imposter.sensu.io
+	keyPair, _, err := testcert.New("imposter.sensu.io", issuedAtSensu, duration)
 	if err != nil {
 		t.Fatalf("could not load testcert as x509 key pair: %v", err)
 	}
 
-	tlsCfg := &tls.Config{Certificates: []tls.Certificate{keyPair}}
+	// Issue extra keypair for local.test virtual host at a different time
+	issuedAtLocalTest := time.Unix(3<<30, 0)
+	extraKeyPair, _, err := testcert.New("local.test", issuedAtLocalTest, duration)
+	if err != nil {
+		t.Fatalf("could not load testcert as x509 key pair: %v", err)
+	}
+
+	tlsCfg := &tls.Config{Certificates: []tls.Certificate{
+		keyPair,
+		extraKeyPair,
+	}}
 	srv := &http.Server{
 		TLSConfig:    tlsCfg,
 		ReadTimeout:  time.Second,
@@ -149,11 +171,11 @@ func TestCollectMetricsFromTLS(t *testing.T) {
 	nonTLSSrv := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {}))
 	defer nonTLSSrv.Close()
 	withTimeIssued := func() time.Time {
-		return testcert.NotBefore
+		return issuedAtSensu
 	}
 
 	oneHourAfterExpiration := func() time.Time {
-		return testcert.NotAfter.Add(time.Hour)
+		return issuedAtSensu.Add(duration).Add(time.Hour)
 	}
 
 	testCases := []testCase{
@@ -165,7 +187,7 @@ func TestCollectMetricsFromTLS(t *testing.T) {
 			},
 			Expected: &cert.Metrics{
 				SecondsSinceIssued:  0,
-				SecondsUntilExpires: int(testcert.TimeEffective.Seconds()),
+				SecondsUntilExpires: int(duration.Seconds()),
 			},
 		}, {
 			Name: "https test server expired",
@@ -174,7 +196,7 @@ func TestCollectMetricsFromTLS(t *testing.T) {
 				Now:  oneHourAfterExpiration,
 			},
 			Expected: &cert.Metrics{
-				SecondsSinceIssued:  int((testcert.TimeEffective + time.Hour).Seconds()),
+				SecondsSinceIssued:  int((duration + time.Hour).Seconds()),
 				SecondsUntilExpires: int(-1 * time.Hour.Seconds()),
 			},
 		}, {
@@ -182,6 +204,30 @@ func TestCollectMetricsFromTLS(t *testing.T) {
 			Args: args{
 				Cert: "tcp://" + ln.Addr().String(),
 				Now:  withTimeIssued,
+			},
+		}, {
+			Name: "tcp servername extension imposter.sensu.io",
+			Args: args{
+				Cert:       "tcp://" + ln.Addr().String(),
+				Now:        withTimeIssued,
+				ServerName: "imposter.sensu.io",
+			},
+			Expected: &cert.Metrics{
+				SecondsSinceIssued:  0,
+				SecondsUntilExpires: int(duration.Seconds()),
+			},
+		}, {
+			Name: "tcp servername extension local.test",
+			Args: args{
+				Cert:       "tcp://" + ln.Addr().String(),
+				ServerName: "local.test",
+				Now: func() time.Time {
+					return issuedAtLocalTest.Add(time.Minute * 2)
+				},
+			},
+			Expected: &cert.Metrics{
+				SecondsSinceIssued:  120,
+				SecondsUntilExpires: int((duration - time.Minute*2).Seconds()),
 			},
 		}, {
 			Name: "tcp4 test server",
@@ -225,9 +271,12 @@ func TestCollectMetricsFromTLS(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.Name, func(t *testing.T) {
-			ctx, cancel := context.WithTimeout(ctx, time.Second)
+			ctx, cancel := context.WithTimeout(ctx, 2*time.Second)
 			defer cancel()
-			actual, err := cert.CollectMetrics(ctx, tc.Args.Cert, cert.Config{Now: tc.Args.Now})
+			actual, err := cert.CollectMetrics(ctx, tc.Args.Cert, cert.Config{
+				Now:        tc.Args.Now,
+				ServerName: tc.Args.ServerName,
+			})
 			if err != nil && !tc.ExpectErr {
 				t.Errorf("unexpected error %v", err)
 				return
@@ -250,8 +299,9 @@ func TestCollectMetricsFromTLS(t *testing.T) {
 }
 
 type args struct {
-	Cert string
-	Now  func() time.Time
+	Cert       string
+	ServerName string
+	Now        func() time.Time
 }
 
 type testCase struct {
