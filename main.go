@@ -74,7 +74,7 @@ func executeCheck(event *types.Event) (int, error) {
 	ctx := context.Background()
 	if plugin.Timeout > 0 {
 		var cancel context.CancelFunc
-		ctx, cancel = context.WithTimeout(ctx, time.Duration(plugin.Timeout))
+		ctx, cancel = context.WithTimeout(ctx, time.Second*time.Duration(plugin.Timeout))
 		defer cancel()
 	}
 	metrics, err := cert.CollectMetrics(ctx, plugin.Cert, cert.Config{ServerName: plugin.ServerName})
