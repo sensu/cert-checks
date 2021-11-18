@@ -33,8 +33,9 @@ Available Commands:
   version     Print the version number of this plugin
 
 Flags:
-  -c, --cert string   URL or file path to certificate
-  -h, --help          help for cert-checks
+  -c, --cert string         URL or file path to certificate
+  -h, --help                help for cert-checks
+  -s, --servername string   optional TLS servername extension argument
 
 Use "cert-checks [command] --help" for more information about a command.
 ```
