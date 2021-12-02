@@ -30,6 +30,7 @@ func New(host string, notBefore time.Time, duration time.Duration) (tls.Certific
 		Subject: pkix.Name{
 			Organization:       []string{"Sumo Logic Inc"},
 			OrganizationalUnit: []string{"Sensu Test"},
+			CommonName:         host,
 		},
 		NotBefore: notBefore,
 		NotAfter:  notBefore.Add(duration),

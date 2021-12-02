@@ -76,11 +76,12 @@ func CollectMetrics(ctx context.Context, path string, cfg Config) (Metrics, erro
 	if err != nil {
 		return metrics, err
 	}
+	metrics.Tags = map[string]string{"subject": cert.Subject.CommonName}
 	if cfg.ServerName != "" {
 		if err := cert.VerifyHostname(cfg.ServerName); err != nil {
 			return metrics, fmt.Errorf("error supplied servername not valid for this certificate: %v", err)
 		}
-		metrics.Tags = map[string]string{"servername": cfg.ServerName}
+		metrics.Tags["servername"] = cfg.ServerName
 	}
 	now := cfg.Now()
 	metrics.EvaluatedAt = now

@@ -62,6 +62,9 @@ func TestCollectMetricsFromFile(t *testing.T) {
 			Expected: &cert.Metrics{
 				SecondsSinceIssued:  0,
 				SecondsUntilExpires: int(duration.Seconds()),
+				Tags: map[string]string{
+					"subject": "imposter.sensu.io",
+				},
 			},
 		}, {
 			Name: "includes servername tags when set",
@@ -73,7 +76,10 @@ func TestCollectMetricsFromFile(t *testing.T) {
 			Expected: &cert.Metrics{
 				SecondsSinceIssued:  0,
 				SecondsUntilExpires: int(duration.Seconds()),
-				Tags:                map[string]string{"servername": "imposter.sensu.io"},
+				Tags: map[string]string{
+					"subject":    "imposter.sensu.io",
+					"servername": "imposter.sensu.io",
+				},
 			},
 		}, {
 			Name: "validates certificate hostname when servername set",
@@ -93,6 +99,9 @@ func TestCollectMetricsFromFile(t *testing.T) {
 			Expected: &cert.Metrics{
 				SecondsSinceIssued:  0,
 				SecondsUntilExpires: int(duration.Seconds()),
+				Tags: map[string]string{
+					"subject": "imposter.sensu.io",
+				},
 			},
 		},
 		{
@@ -104,6 +113,9 @@ func TestCollectMetricsFromFile(t *testing.T) {
 			Expected: &cert.Metrics{
 				SecondsSinceIssued:  int((duration + time.Hour).Seconds()),
 				SecondsUntilExpires: int((-1 * time.Hour).Seconds()),
+				Tags: map[string]string{
+					"subject": "imposter.sensu.io",
+				},
 			},
 		},
 		{
@@ -215,6 +227,9 @@ func TestCollectMetricsFromTLS(t *testing.T) {
 			Expected: &cert.Metrics{
 				SecondsSinceIssued:  0,
 				SecondsUntilExpires: int(duration.Seconds()),
+				Tags: map[string]string{
+					"subject": "imposter.sensu.io",
+				},
 			},
 		}, {
 			Name: "https test server expired",
@@ -225,6 +240,9 @@ func TestCollectMetricsFromTLS(t *testing.T) {
 			Expected: &cert.Metrics{
 				SecondsSinceIssued:  int((duration + time.Hour).Seconds()),
 				SecondsUntilExpires: int(-1 * time.Hour.Seconds()),
+				Tags: map[string]string{
+					"subject": "imposter.sensu.io",
+				},
 			},
 		}, {
 			Name: "tcp test server",
@@ -242,7 +260,10 @@ func TestCollectMetricsFromTLS(t *testing.T) {
 			Expected: &cert.Metrics{
 				SecondsSinceIssued:  0,
 				SecondsUntilExpires: int(duration.Seconds()),
-				Tags:                map[string]string{"servername": "imposter.sensu.io"},
+				Tags: map[string]string{
+					"subject":    "imposter.sensu.io",
+					"servername": "imposter.sensu.io",
+				},
 			},
 		}, {
 			Name: "error when servername not valid for cert",
@@ -263,7 +284,10 @@ func TestCollectMetricsFromTLS(t *testing.T) {
 			Expected: &cert.Metrics{
 				SecondsSinceIssued:  120,
 				SecondsUntilExpires: int((duration - time.Minute*2).Seconds()),
-				Tags:                map[string]string{"servername": "local.test"},
+				Tags: map[string]string{
+					"servername": "local.test",
+					"subject":    "local.test",
+				},
 			},
 		}, {
 			Name: "tcp4 test server",
