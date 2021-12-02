@@ -33,7 +33,7 @@ var (
 			Env:       "CHECK_CERT",
 			Argument:  "cert",
 			Shorthand: "c",
-			Usage:     "URL or file path to certificate",
+			Usage:     "URL to certificate. Supports https, tcp, and file schemes",
 			Value:     &plugin.Cert,
 		},
 		{
@@ -65,7 +65,7 @@ func main() {
 
 func checkArgs(event *types.Event) (int, error) {
 	if plugin.Cert == "" {
-		return sensu.CheckStateWarning, fmt.Errorf("--cert is required. must be file path or URL to certificate. ex: /var/run/app/site.crt, https://dev1.sensu.io:8443")
+		return sensu.CheckStateWarning, fmt.Errorf("--cert is required. must be URL to certificate. ex: file:///var/run/app/site.crt, https://dev1.sensu.io:8443, tcp://127.0.0.1:443")
 	}
 	return sensu.CheckStateOK, nil
 }

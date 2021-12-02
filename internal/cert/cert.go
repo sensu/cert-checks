@@ -91,10 +91,7 @@ func CollectMetrics(ctx context.Context, path string, cfg Config) (Metrics, erro
 }
 
 func parse(cert, servername string) (certificateLoader, error) {
-	if strings.HasPrefix(cert, "file://") ||
-		strings.HasPrefix(cert, "/") ||
-		strings.Index(cert, ":\\") == 1 {
-
+	if strings.HasPrefix(cert, "file://") {
 		path := strings.TrimPrefix(cert, "file://")
 		info, err := os.Stat(path)
 		if err != nil {
@@ -121,7 +118,7 @@ func parse(cert, servername string) (certificateLoader, error) {
 	case "tcp", "tcp4", "tcp6":
 		return fromTLSHandshake(certURL, servername), nil
 	default:
-		return nil, fmt.Errorf("unsupported certificate location scheme %s", certURL.Scheme)
+		return nil, fmt.Errorf("unsupported certificate location scheme \"%s\" for %s", certURL.Scheme, cert)
 	}
 }
 

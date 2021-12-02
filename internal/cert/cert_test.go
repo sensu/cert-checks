@@ -56,7 +56,7 @@ func TestCollectMetricsFromFile(t *testing.T) {
 		{
 			Name: "absolute file path to PEM encoded cert",
 			Args: args{
-				Cert: testCertPath,
+				Cert: "file://" + testCertPath,
 				Now:  withTimeIssued,
 			},
 			Expected: &cert.Metrics{
@@ -67,9 +67,15 @@ func TestCollectMetricsFromFile(t *testing.T) {
 				},
 			},
 		}, {
+			Name: "Absolute Path with no file:// prefix errors",
+			Args: args{
+				Cert: testCertPath,
+			},
+			ExpectErr: true,
+		}, {
 			Name: "includes servername tags when set",
 			Args: args{
-				Cert:       testCertPath,
+				Cert:       "file://" + testCertPath,
 				Now:        withTimeIssued,
 				ServerName: "imposter.sensu.io",
 			},
@@ -84,30 +90,16 @@ func TestCollectMetricsFromFile(t *testing.T) {
 		}, {
 			Name: "validates certificate hostname when servername set",
 			Args: args{
-				Cert:       testCertPath,
+				Cert:       "file://" + testCertPath,
 				Now:        withTimeIssued,
 				ServerName: "bazz.sensu.io",
 			},
 			ExpectErr: true,
 		},
 		{
-			Name: "file:// prefix for PEM encoded cert",
-			Args: args{
-				Cert: "file://" + testCertPath,
-				Now:  withTimeIssued,
-			},
-			Expected: &cert.Metrics{
-				SecondsSinceIssued:  0,
-				SecondsUntilExpires: int(duration.Seconds()),
-				Tags: map[string]string{
-					"subject": "imposter.sensu.io",
-				},
-			},
-		},
-		{
 			Name: "expired PEM encoded cert",
 			Args: args{
-				Cert: testCertPath,
+				Cert: "file://" + testCertPath,
 				Now:  oneHourAfterExpiration,
 			},
 			Expected: &cert.Metrics{
@@ -121,7 +113,7 @@ func TestCollectMetricsFromFile(t *testing.T) {
 		{
 			Name: "corrupted PEM file",
 			Args: args{
-				Cert: corruptCertPath,
+				Cert: "file://" + corruptCertPath,
 				Now:  oneHourAfterExpiration,
 			},
 			ExpectErr: true,
@@ -129,14 +121,14 @@ func TestCollectMetricsFromFile(t *testing.T) {
 		{
 			Name: "File Not Found",
 			Args: args{
-				Cert: tmpDir + "/does-not-exist.txt",
+				Cert: "file://" + tmpDir + "/does-not-exist.txt",
 			},
 			ExpectErr: true,
 		},
 		{
 			Name: "Not a file",
 			Args: args{
-				Cert: tmpDir,
+				Cert: "file://" + tmpDir,
 			},
 			ExpectErr: true,
 		},
