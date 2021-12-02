@@ -29,11 +29,11 @@ func (m Metrics) Output() string {
 	var tags string
 	if len(m.Tags) > 0 {
 		buf := bytes.Buffer{}
-		seperator := ""
+		separator := ""
 		for tag, value := range m.Tags {
-			fmt.Fprintf(&buf, "%s%s=\"%s\"", seperator, tag, value)
-			if seperator == "" {
-				seperator = ", "
+			fmt.Fprintf(&buf, "%s%s=\"%s\"", separator, tag, value)
+			if separator == "" {
+				separator = ", "
 			}
 		}
 		tags = fmt.Sprintf("{%s}", buf.String())
@@ -120,7 +120,7 @@ func parse(cert, servername string) (certificateLoader, error) {
 	case "tcp", "tcp4", "tcp6":
 		return fromTLSHandshake(certURL, servername), nil
 	default:
-		return nil, fmt.Errorf("unsupported scheme %s", certURL.Scheme)
+		return nil, fmt.Errorf("unsupported certificate location scheme %s", certURL.Scheme)
 	}
 }
 
