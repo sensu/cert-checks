@@ -106,7 +106,7 @@ func parse(cert, servername string) (certificateLoader, error) {
 	// Parse as network URL
 	certURL, err := url.Parse(cert)
 	if err != nil {
-		return nil, fmt.Errorf("error parsing URL %v", err)
+		return nil, fmt.Errorf("error parsing certificate location as network url: %v", err)
 	}
 	switch certURL.Scheme {
 	case "https":
