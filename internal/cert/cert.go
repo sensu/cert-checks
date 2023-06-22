@@ -60,6 +60,7 @@ type Config struct {
 	// Now provider defaults to time.Now() when not provided
 	Now        func() time.Time
 	ServerName string
+	Influx     bool
 }
 
 // CollectMetrics Loads a certificate at a particular location and
@@ -76,7 +77,14 @@ func CollectMetrics(ctx context.Context, path string, cfg Config) (Metrics, erro
 	if err != nil {
 		return metrics, err
 	}
-	metrics.Tags = map[string]string{"subject": cert.Subject.CommonName}
+
+	if cfg.Influx {
+		//  InfluxDB does not support * in metrics
+		metrics.Tags = map[string]string{"subject": strings.Replace(cert.Subject.CommonName, "*", "STAR", 1)}
+	}else{
+		metrics.Tags = map[string]string{"subject": cert.Subject.CommonName}
+	}
+
 	if cfg.ServerName != "" {
 		if err := cert.VerifyHostname(cfg.ServerName); err != nil {
 			return metrics, fmt.Errorf("error supplied servername not valid for this certificate: %v", err)

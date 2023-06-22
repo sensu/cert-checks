@@ -16,6 +16,7 @@ type Config struct {
 	sensu.PluginConfig
 	Cert       string
 	ServerName string
+	Influx	   bool
 }
 
 var (
@@ -43,6 +44,15 @@ var (
 			Shorthand: "s",
 			Usage:     "optional TLS servername extension argument",
 			Value:     &plugin.ServerName,
+		},
+		{
+			Path:      "influx",
+			Env:       "INFLUX_FORMAT",
+			Argument:  "influx",
+			Shorthand: "i",
+			Default:   false,
+			Usage:     "optional Influx format output",
+			Value:     &plugin.Influx,
 		},
 	}
 )
@@ -77,7 +87,7 @@ func executeCheck(event *types.Event) (int, error) {
 		ctx, cancel = context.WithTimeout(ctx, time.Second*time.Duration(plugin.Timeout))
 		defer cancel()
 	}
-	metrics, err := cert.CollectMetrics(ctx, plugin.Cert, cert.Config{ServerName: plugin.ServerName})
+	metrics, err := cert.CollectMetrics(ctx, plugin.Cert, cert.Config{ServerName: plugin.ServerName, Influx: plugin.Influx})
 	if err != nil {
 		fmt.Printf("cert-checks failed with error: %s\n", err.Error())
 		return sensu.CheckStateCritical, nil
