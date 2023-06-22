@@ -5,7 +5,7 @@
 # Check Certs
 
 ## Overview
-The [Sensu Cert Check][1] is a cross-platform [Sensu Metrics Check][2] that provides certificate metrics in prometheus format. 
+The [Sensu Cert Check][1] is a cross-platform [Sensu Metrics Check][2] that provides certificate metrics in prometheus or InlfuxDB format.
 
 ### Output Metrics
 
@@ -36,10 +36,11 @@ Flags:
   -c, --cert string         URL or file path to certificate
   -h, --help                help for cert-checks
   -s, --servername string   optional TLS servername extension argument
+  -i, --influx boolean      output in InfluxDB compatible format (default: false) 
 
 Use "cert-checks [command] --help" for more information about a command.
 ```
 
 
-[1]: https://github.com/sensu/system-check
+[1]: https://github.com/sensu/cert-check
 [2]: https://docs.sensu.io/sensu-go/latest/reference/checks/
